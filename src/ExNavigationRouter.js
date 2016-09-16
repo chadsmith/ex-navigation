@@ -143,7 +143,11 @@ export class ExNavigationRoute {
   };
 
   getTitleStyle = () => {
-    return _.get(this.config, 'navigationBar.titleStyle');
+    const titleStyle = _.get(this.config, 'navigationBar.titleStyle');
+    if (typeof titleStyle === 'function') {
+      return titleStyle(this.params, this.config);
+    }
+    return titleStyle;
   };
 
   getEventEmitter = () => {
@@ -277,7 +281,10 @@ export class ExNavigationRouter<RC: RouteCreator> {
     const routeElement: ReactElement<{}> = route.render();
     const ComponentClass = routeElement.type;
 
-    const componentRouteConfig = ComponentClass.route;
+    let componentRouteConfig = ComponentClass.route;
+    if (typeof componentRouteConfig === 'function') {
+      componentRouteConfig = componentRouteConfig(routeParams);
+    }
     if (componentRouteConfig) {
       route.config = _.merge({}, route.config, componentRouteConfig);
     }
