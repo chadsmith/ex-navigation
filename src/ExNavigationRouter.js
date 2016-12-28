@@ -84,7 +84,7 @@ export class ExNavigationRoute {
     let backgroundColor = this.getBarBackgroundColor();
 
     if (backgroundColor) {
-      if (__DEV__ && this.getTranslucent() && !backgroundColor.match(/rgba/)) {
+      if (__DEV__ && this.getTranslucent() && !backgroundColor.match(/rgba|#([0-9a-fA-F]{2}){4}/)) {
         console.warn('Using translucent navigation bar and specifying a solid background color, please use rgba or the bar will not be translucent.');
       }
 
@@ -114,6 +114,10 @@ export class ExNavigationRoute {
     return _.get(this.config, 'navigationBar.translucent');
   };
 
+  getTranslucentTint = () => {
+    return _.get(this.config, 'navigationBar.translucentTint');
+  };
+
   getBarElevation = () => {
     return _.get(this.config, 'navigationBar.elevation');
   };
@@ -139,7 +143,11 @@ export class ExNavigationRoute {
   };
 
   getBarTintColor = () => {
-    return _.get(this.config, 'navigationBar.tintColor');
+    const tintColor = _.get(this.config, 'navigationBar.tintColor');
+    if (typeof tintColor === 'function') {
+      return tintColor(this.params, this.config);
+    }
+    return tintColor;
   };
 
   getTitleStyle = () => {
@@ -194,21 +202,24 @@ export class ExNavigationRouter<RC: RouteCreator> {
   _routes: { [routeName: string]: () => ExNavigationRouteDefinition };
   _routesCreator: Function;
   _routesCreated: bool;
+  _ignoreSerializableWarnings: bool;
 
-  constructor(routesCreator: Function) {
+  constructor(routesCreator: Function, options: Object = {}) {
     this._routesCreator = routesCreator;
     this._routes = {};
     this._routesCreated = false;
+    this._ignoreSerializableWarnings = !!options.ignoreSerializableWarnings;
   }
 
   getRoute(routeName: $Keys<RC>, routeParams: Object = {}): ExNavigationRoute {
     this._ensureRoute(routeName);
 
-    if (__DEV__) {
+    if (__DEV__ && !this._ignoreSerializableWarnings) {
       warning(
         _isSerializable(routeParams),
         'You passed a non-serializable value as route parameters. This may prevent navigation state ' +
-        'from being saved and restored properly.'
+        'from being saved and restored properly. This is only relevant if you would like to be able to' +
+        'save and reload your navigation state. You can ignore this error with ignoreSerializableWarnings.'
       );
     }
 
@@ -308,8 +319,8 @@ type RouteCreator = {
   [key: string]: () => ExNavigationRouteDefinition
 }
 
-export function createRouter<RC: RouteCreator>(routesCreator: () => RC): ExNavigationRouter<RC> {
-  return new ExNavigationRouter(routesCreator);
+export function createRouter<RC: RouteCreator>(routesCreator: () => RC, options?: Object): ExNavigationRouter<RC> {
+  return new ExNavigationRouter(routesCreator, options);
 }
 
 function _isSerializable(obj: Object): boolean {

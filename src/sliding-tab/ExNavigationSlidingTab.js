@@ -6,6 +6,7 @@ import React, {
   Children,
 } from 'react';
 import {
+  Platform,
   StyleSheet,
   View,
 } from 'react-native';
@@ -20,10 +21,14 @@ import ExNavigatorContext from '../ExNavigatorContext';
 import ExNavigationBar from '../ExNavigationBar';
 import ExNavigationSlidingTabItem from './ExNavigationSlidingTabItem';
 import { ExNavigationTabContext } from '../tab/ExNavigationTab';
-import { TabViewAnimated, TabViewPage, TabBarTop, TabBar } from 'react-native-tab-view';
+import { TabViewAnimated, TabViewPagerAndroid, TabViewPagerScroll, TabBarTop, TabBar } from 'react-native-tab-view';
 import { createNavigatorComponent } from '../ExNavigationComponents';
 
 import type ExNavigationContext from '../ExNavigationContext';
+
+const TabViewPagerComponent = Platform.OS === 'ios' ?
+  TabViewPagerScroll :
+  TabViewPagerAndroid;
 
 // TODO: Fill this in
 type SlidingTabItem = {
@@ -33,19 +38,28 @@ type SlidingTabItem = {
 };
 
 type Props = {
-  barBackgroundColor: ?string,
-  indicatorStyle: any,
-  initialTab: string,
+  barBackgroundColor?: string,
   children: Array<React.Element<any>>,
+  indicatorStyle?: any,
+  initialTab: string,
+  lazy?: bool,
   navigation: any,
   navigationState: any,
-  position: "top" | "bottom",
-  pressColor: ?string,
-  renderBefore: () => ?ReactElement<any>,
-  style: any,
   onRegisterNavigatorContext: () => any,
-  tabBarStyle: any,
-  tabStyle: any,
+  onChangeTab: (key: string) => any,
+  onUnregisterNavigatorContext: (navigatorUID: string) => void,
+  position: "top" | "bottom",
+  pressColor?: string,
+  renderBefore: () => ?React.Element<any>,
+  renderHeader?: (props: any) => ?React.Element<any>,
+  renderFooter?: (props: any) => ?React.Element<any>,
+  renderLabel?: (routeParams: any) => ?React.Element<any>,
+  getRenderLabel?: (props: any) => (routeParams: any) => ?React.Element<any>,
+  style?: any,
+  swipeEnabled?: boolean,
+  tabBarStyle?: any,
+  tabStyle?: any,
+  labelStyle?: any,
 };
 
 type State = {
@@ -109,7 +123,7 @@ class ExNavigationSlidingTab extends PureComponent<any, Props, State> {
 
     this._registerNavigatorContext();
 
-    let routes = tabItems.map(i => ({key: i.id}));
+    let routes = tabItems.map(({ id, title }) => ({ title, key: id }));
     let routeKeys = routes.map(r => r.key);
 
     this.props.navigation.dispatch(Actions.setCurrentNavigator(
@@ -124,6 +138,7 @@ class ExNavigationSlidingTab extends PureComponent<any, Props, State> {
 
   componentWillUnmount() {
     this.props.navigation.dispatch(Actions.removeNavigator(this.state.navigatorUID));
+    this.props.onUnregisterNavigatorContext(this.state.navigatorUID);
   }
 
   componentWillReceiveProps(nextProps) {
@@ -169,17 +184,25 @@ class ExNavigationSlidingTab extends PureComponent<any, Props, State> {
 
     return (
       <TabViewAnimated
+        lazy={this.props.lazy}
         style={[styles.container, this.props.style]}
         navigationState={navigationState}
-        renderScene={this._renderPage}
-        renderHeader={this._renderHeader}
+        renderScene={this._renderScene}
+        renderPager={this._renderPager}
+        renderHeader={this.props.renderHeader || (this.props.position !== 'bottom' ? this._renderTabBar : undefined)}
+        renderFooter={this.props.renderFooter || (this.props.position === 'bottom' ? this._renderTabBar : undefined)}
         onRequestChangeTab={this._setActiveTab}
       />
     );
   }
 
-  _renderPage = (props) => {
-    return <TabViewPage {...props} renderScene={this._renderScene} />;
+  _renderPager = (props) => {
+    return (
+      <TabViewPagerComponent
+        {...props}
+        swipeEnabled={this.props.swipeEnabled}
+      />
+    );
   }
 
   _renderScene = ({ route }) => {
@@ -191,19 +214,18 @@ class ExNavigationSlidingTab extends PureComponent<any, Props, State> {
     }
   };
 
-  _renderLabel = (options) => {
-    let { route, focused, index } = options;
-    let tabItem = this.state.tabItems.find(i => i.id === route.key);
-
-    return tabItem && tabItem.renderLabel ? tabItem.renderLabel(options) : null;
-  }
-
-  _renderHeader = (props) => {
+  _renderTabBar = (props) => {
     const TabBarComponent = this.props.position === 'top' ? TabBarTop : TabBar;
+    const renderLabelFn = this.props.getRenderLabel ?
+      this.props.getRenderLabel(props) :
+      this.props.renderLabel;
+
     const tabBarProps = {
       pressColor: this.props.pressColor,
       indicatorStyle: this.props.indicatorStyle,
       tabStyle: this.props.tabStyle,
+      labelStyle: this.props.labelStyle,
+      renderLabel: renderLabelFn,
       style: [{backgroundColor: this.props.barBackgroundColor}, this.props.tabBarStyle],
     };
 
@@ -213,7 +235,6 @@ class ExNavigationSlidingTab extends PureComponent<any, Props, State> {
         <TabBarComponent
           {...props}
           {...tabBarProps}
-          renderLabel={this._renderLabel}
         />
       </View>
     );
@@ -243,19 +264,14 @@ class ExNavigationSlidingTab extends PureComponent<any, Props, State> {
         ..._.omit(tabItemProps, ['children']),
       };
 
+      invariant(
+        !tabItem.renderLabel,
+        'renderLabel should be passed to SlidingTabNavigation instead of SlidingTabNavigationItem.',
+      );
+
       if (Children.count(tabItemProps.children) > 0) {
         tabItem.element = Children.only(tabItemProps.children);
       }
-
-      // const tabItemOnPress = () => {
-      //   this._setActiveTab(tabItemProps.id, index);
-      // };
-
-      // if (typeof tabItemProps.onPress === 'function') {
-      //   tabItem.onPress = tabItem.onPress.bind(this, tabItemOnPress);
-      // } else {
-      //   tabItem.onPress = tabItemOnPress;
-      // }
 
       return tabItem;
     });
@@ -272,9 +288,9 @@ class ExNavigationSlidingTab extends PureComponent<any, Props, State> {
     let key = tabItem.id;
     this._getNavigatorContext().jumpToTab(key);
 
-    // if (typeof this.props.onTabPress === 'function') {
-    //   this.props.onTabPress(key);
-    // }
+    if (typeof this.props.onChangeTab === 'function') {
+      this.props.onChangeTab(key);
+    }
   }
 
   _getNavigationState(props: ?Props): Object {

@@ -8,7 +8,7 @@ support](https://img.shields.io/badge/exponent-ios%20%7C%20android-blue.svg?styl
 A route-centric, batteries-included navigation library for Exponent and
 React Native that works seamlessly on Android and iOS.
 
-### A few of our favorite features:
+### A few of our favorite features
 
 - Android back button handling (it just works, no need to do anything)
 - Tab bar navigation
@@ -19,7 +19,34 @@ React Native that works seamlessly on Android and iOS.
 - Declarative configuration co-located with your routes
 - Typed with Flow
 
+## An important note about the future
+
+"ExNavigation 2" will be called "react-navigation" and it will live on
+the [reactjs](https://github.com/reactjs) organization. It is currently
+being built and scheduled for a beta release in January, 2017. A
+migration path from ExNavigation will be provided.
+
+This means that ExNavigation is currently in maintenance mode -- we
+aren't actively adding new features unless we need them for our own
+projects, because further work is being directed towards
+react-navigation. Pull requests are still welcome.
+
+## Help / Support / Questions
+
+We don't provide any realtime support for ExNavigation questions. If you
+join the Exponent Slack and ask a question there, we will direct you to
+this section of the README. We suggest the following resources:
+
+- Search the README.
+- [Search the issues, then post an issue if nothing matches](https://github.com/exponent/ex-navigation/issues).
+- Search the code if nothing else works.
+- Once you solve your problem, submit a pull request to add the solution to the README.
+
 ## Installation
+
+As of version 1.9.0, ExNavigation only supports React Native versions >=
+0.36.0 due to changes to the css-layout algorithm in React Native core.
+
 
 - `npm i @exponent/ex-navigation babel-preset-react-native-stage-0 --save`
 - Change your `.babelrc` (if you have one, if not, then create one):
@@ -37,9 +64,11 @@ React Native that works seamlessly on Android and iOS.
 
 ## How to run the example project
 
-- `cd example/ExNavigationExample && npm install`
-- [Install the Exponent client and XDE](https://docs.getexponent.com/versions/v8.0.0/introduction/installation.html)
+- `cd example && npm install`
+- [Install the Exponent client and XDE](https://docs.getexponent.com/versions/v10.0.0/introduction/installation.html)
 - Open the project in XDE and open it in the Exponent client
+
+or use this link in your mobile phone: https://getexponent.com/@community/ex-navigation-example
 
 ## How is this different from what is built into React Native?
 
@@ -60,6 +89,13 @@ import {
   Text,
   View,
 } from 'react-native';
+
+/**
+ * If you're using Exponent, uncomment the line below to import Exponent
+ * BEFORE importing `@exponent/ex-navigation`. This sets the status bar
+ * offsets properly.
+ */
+// import Exponent from 'exponent';
 
 import {
   createRouter,
@@ -178,7 +214,7 @@ from the stack by calling those functions on the `navigator` prop. This
 is a prop that is passed into all components that you registered with
 the router. If you need to access the `navigator` on a component that
 is not a route, you can either pass it in manually from your route
-component use `withNavigation` as a decorator on the component:
+component or use `withNavigation` as a decorator on the component:
 
 ```javascript
 import React from 'react';
@@ -198,6 +234,19 @@ class BackButton extends React.Component {
   }
 }
 ```
+
+Alternatively, rather than importing `Router` each time, you may pass the
+route's name directly:
+
+```diff
+_goToAbout = () => {
+-  this.props.navigator.push(Router.getRoute('about'));
++  this.props.navigator.push('about');
+}
+```
+
+… bearing in mind you will loose the ability to type check the route (if using
+Flow).
 
 ## Passing params to a route
 
@@ -264,13 +313,19 @@ on `StackNavigation` navigators.
 +
 ```
 
+### Make navigation bar buttons update based on route or app state
+
+See the following example for details on how to connect your buttons to
+the navigator or Redux to perform actions: https://github.com/brentvatne/ex-navigation-conditional-buttons-example
+
 ## StackNavigation actions
 
 As you saw above, you can `push` and `pop` routes. The following is a
 full list of functions that can be called on StackNavigation navigators.
 
 - `push`: add a route to the top of the stack
-- `pop`: remove the route at the top of the stack
+- `pop(n)`: remove n routes from the top of the stack, defaults to 1
+- `popToTop`: remove all but the first route from the stack
 - `replace`: replace the current route with a given route
 - `showLocalAlert`: show an alert bar with given text and styles
 - `hideLocalAlert`: hide an active alert bar
@@ -294,14 +349,9 @@ on the left or right of the title.
 
 ```javascript
 
- @connect()
- class SignOutButton extends React.Component {
-   render() {
-      return (
-        <TouchableOpacity onPress={this.props.dispatch(Actions.signOut())}>
-          <Text>Sign out</Text>
-        </TouchableOpacity>
-      );
+ class HomeScreen extends React.Component {
+   _goToAbout = () => {
+     this.props.navigator.push(Router.getRoute('about', {name: 'Brent'}));
    }
  }
 
@@ -309,11 +359,22 @@ on the left or right of the title.
    static route = {
      navigationBar: {
        title: 'Title goes here',
-       renderRight: (route, props) => <SignOutButton />
+       renderRight: (route, props) => <SignOutButton name={route.params.name} />
      }
    }
 
    // ...
+ }
+ 
+ @connect()
+ class SignOutButton extends React.Component {
+   render() {
+      return (
+        <TouchableOpacity onPress={this.props.dispatch(Actions.signOut())}>
+          <Text>Sign out {this.props.name}</Text>
+        </TouchableOpacity>
+      );
+   }
  }
 ```
 
@@ -356,12 +417,16 @@ drawer button icons.
 be visible for this route.
 - `translucent` - iOS and Exponent only, use background blur on the
 `navigationBar`, like in the Apple Podcasts app, for example.
+- `borderBottomWidth` - the width of the bottom border
+- `borderBottomColor` - the color of the bottom border
 - `renderLeft` - a function that should return a React component that
 will be rendered in the left position of the `navigationBar`.
 - `renderTitle` - a function that should return a React component that
 will be rendered in the title position of the `navigationBar`.
 - `renderRight` - a function that should return a React component that
 will be rendered in the right position of the `navigationBar`.
+- `renderBackground` - a function that should return a React component that 
+will be rendered in the background of the `navigationBar`.
 
 ## TabNavigation
 
@@ -376,7 +441,7 @@ import {
 
 
 // Treat the TabScreen route like any other route -- you may want to set
-// it as the intiial route for a top-level StackNavigation
+// it as the initial route for a top-level StackNavigation
 class TabScreen extends React.Component {
   static route = {
     navigationBar: {
@@ -389,14 +454,15 @@ class TabScreen extends React.Component {
       <TabNavigation
         id="main"
         navigatorUID="main"
-        initialTab="more">
+        initialTab="home">
         <TabItem
           id="home"
           title="Home"
           selectedStyle={styles.selectedTab}
-          renderIcon={(isSelected) => <Image source={require('./assets/images/home.png'} /> }>
+          renderIcon={(isSelected) => <Image source={require('./assets/images/home.png')} /> }>
           <StackNavigation
-            id={id}
+            id="home"
+            navigatorUID="home"
             initialRoute={Router.getRoute('home')}
           />
         </TabItem>
@@ -407,7 +473,7 @@ class TabScreen extends React.Component {
           selectedStyle={styles.selectedTab}
           renderIcon={(isSelected) => <Image source={require('./assets/images/posts.png')} /> }>
           <StackNavigation
-            id={id}
+            id="posts"
             initialRoute={Router.getRoute('posts')}
           />
         </TabItem>
@@ -418,7 +484,7 @@ class TabScreen extends React.Component {
           selectedStyle={styles.selectedTab}
           renderIcon={(isSelected) => <Image source={require('./assets/images/profile.png')} /> }>
           <StackNavigation
-            id={id}
+            id="profile"
             initialRoute={Router.getRoute('profile')}
           />
         </TabItem>
@@ -429,7 +495,7 @@ class TabScreen extends React.Component {
 ```
 
 See an example of TabNavigation in a real app
-[here](https://github.com/exponentjs/rnplay/blob/f4d29c4578fb57347afd0d507a036dd232ec6fdb/navigation/TabNavigationLayout.js).
+[here](https://github.com/exponent/rnplay/blob/f4d29c4578fb57347afd0d507a036dd232ec6fdb/navigation/TabNavigationLayout.js).
 
 If you'd like to switch tabs programmatically (eg: a notification
 arrives and you want to jump to a notifications tab, or you tap on a
@@ -448,6 +514,97 @@ to be set on TabNavigator, as with the example above.
 />
 ```
 
+## DrawerNavigation
+
+A minimal example using the DrawerNavigation:
+
+```javascript
+import {
+  StackNavigation,
+  DrawerNavigation,
+  DrawerNavigationItem,
+} from '@exponent/ex-navigation';
+
+// Treat the DrawerNavigationLayout route like any other route -- you may want to set
+// it as the intiial route for a top-level StackNavigation
+
+class DrawerNavigationLayout extends React.Component {
+  static route = {
+    navigationBar: {
+      visible: false,
+    }
+  };
+
+  render() {
+    return (
+      <DrawerNavigation
+        id='main'
+        initialItem='home'
+        drawerWidth={300}
+        renderHeader={this._renderHeader}
+      >
+        <DrawerNavigationItem
+          id='home'
+          selectedStyle={styles.selectedItemStyle}
+          renderTitle={isSelected => this._renderTitle('Home', isSelected)}
+        >
+          <StackNavigation
+            id='home'
+            initialRoute={Router.getRoute('home')}
+          />
+        </DrawerNavigationItem>
+
+        <DrawerNavigationItem
+          id='about'
+          selectedStyle={styles.selectedItemStyle}
+          renderTitle={isSelected => this._renderTitle('About', isSelected)}
+        >
+          <StackNavigation
+            id='about'
+            initialRoute={Router.getRoute('about')}
+          />
+        </DrawerNavigationItem>
+
+      </DrawerNavigation>
+    );
+  }
+
+  _renderHeader = () => {
+    return (
+      <View style={styles.header}>
+      </View>
+    );
+  };
+
+  _renderTitle(text: string, isSelected: boolean) {
+    return (
+      <Text style={[styles.titleText, isSelected ? styles.selectedTitleText : {}]}>
+        {text}
+      </Text>
+    );
+  };
+}
+
+const styles = StyleSheet.create({
+  header: {
+    height: 20
+  },
+
+  selectedItemStyle: {
+    backgroundColor: 'blue'
+  },
+
+  titleText: {
+    fontWeight: 'bold'
+  },
+
+  selectedTitleText: {
+    color: 'white'
+  }
+});
+```
+
+
 ### Integrate with your existing Redux store
 
 Behind the scenes ExNavigation manages your navigation state using
@@ -460,11 +617,13 @@ function when creating the store and then manually provide the
 /* Your store definition, let's say state/Store.js */
 
 import { createNavigationEnabledStore, NavigationReducer } from '@exponent/ex-navigation';
-import { createStore } from 'redux';
+import { combineReducers, createStore } from 'redux';
+
 const createStoreWithNavigation = createNavigationEnabledStore({
   createStore,
   navigationStateKey: 'navigation',
 });
+
 const store = createStoreWithNavigation(
   /* combineReducers and your normal create store things here! */
   combineReducers({
@@ -479,42 +638,44 @@ export default store;
 ```javascript
 /* Your routes, Router.js */
 
+import { createRouter } from '@exponent/ex-navigation';
+import HomeScreen from './HomeScreen';
+
 export const Router = createRouter(() => ({
   home: () => HomeScreen,
 }));
 ```
 
-```javascript
-/* The top level of your app, often in main.js or index.[ios/android].js */
+```diff
+ /* The top level of your app, often in main.js or index.[ios/android].js */
 
-import {
-  createRouter,
-  NavigationContext,
-  NavigationProvider,
-  StackNavigation,
-} from '@exponent/ex-navigation';
+ import {
+   NavigationContext,
+   NavigationProvider,
+   StackNavigation,
+ } from '@exponent/ex-navigation';
 
-import Store from './state/Store';
-import Router from './Router';
+ import Store from './state/Store';
+ import Router from './Router';
 
-const navigationContext = new NavigationContext({
-  router: Router,
-  store: Store,
-})
++const navigationContext = new NavigationContext({
++  router: Router,
++  store: Store,
++})
 
-return (
-  <Provider store={Store}>
-    <NavigationProvider context={navigationContext}>
-      <StackNavigation yourUsualPropsHere />
-    </NavigationProvider>
-  </Provider>
-)
+ return (
+   <Provider store={Store}>
++    <NavigationProvider context={navigationContext}>
+       <StackNavigation yourUsualPropsHere />
+     </NavigationProvider>
+   </Provider>
+ )
 ```
 
 ### Perform navigation actions from outside of a component
 
 You might be using some Redux middleware like saga, thunk, promise, or
-effex (we recommend [effex](https://github.com/exponentjs/redux-effex)
+effex (we recommend [effex](https://github.com/exponent/redux-effex)
 because we love `async/await`). Whatever you're using, you no longer
 have access to `this.props.navigator` and the like. What to do?
 Well as long as you include your navigation state inside of your Redux
@@ -535,4 +696,58 @@ export default function goHome() {
   let navigatorUID = Store.getState().navigation.currentNavigatorUID;
   Store.dispatch(NavigationActions.push(navigatorUID, Router.getRoute('home')))
 }
+```
+
+### Screen Tracking / Analytics
+
+You might want to do some screen tracking in your apps. Since the entire navigation state is in redux, screen tracking is as simple as writing a redux middleware. Below is a simple middleware that uses `routeName` as the screen name for tracking screens.
+
+```javascript
+import SegmentIO from 'react-native-segment-io-analytics';
+
+const navigationStateKey = 'navigation';
+
+// gets the current screen from navigation state
+function getCurrentScreen(getStateFn) {
+  const navigationState = getStateFn()[navigationStateKey];
+  // navigationState can be null when exnav is initializing
+  if (!navigationState) return null;
+
+  const { currentNavigatorUID, navigators } = navigationState;
+  if (!currentNavigatorUID) return null;
+
+  const { index, routes } = navigators[currentNavigatorUID];
+  const { routeName } = routes[index];
+  return routeName;
+}
+
+const screenTracking = ({ getState }) => next => action => {
+  if (!action.type.startsWith('EX_NAVIGATION')) return next(action);
+  const currentScreen = getCurrentScreen(getState);
+  const result = next(action);
+  const nextScreen = getCurrentScreen(getState);
+  if (nextScreen !== currentScreen) {
+    SegmentIO.screen(nextScreen);
+  }
+  return result;
+}
+
+export default screenTracking;
+
+```
+
+### Android back button handling
+
+React Native includes a global `BackAndroid` module. Rather than using this module 
+directly, include the `AndroidBackButtonBehavior` component in routes where you'd 
+like to control the back button. `AndroidBackButtonBehavior` accepts
+`isFocused` and `onBackButtonPress`. If `isFocused` is true, the `onBackButtonPress` 
+will fire when the user presses the back button. You need to make sure that `onBackButtonPress` 
+returns a promise that wraps the function you want to be called. Eg. 
+
+```
+<AndroidBackButtonBehavior isFocused={someboolean}
+   onBackButtonPress={()=>Promise.resolve(fireMeWhenSomeBooleanIsTrue)}>
+   ...
+</AndroidBackButtonBehavior>
 ```

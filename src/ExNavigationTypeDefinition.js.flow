@@ -4,22 +4,24 @@
 
 import React from 'react';
 import {
-   NavigationExperimental,
- } from 'react-native';
-
-import NavigationTypeDefinition from 'react-native/Libraries/NavigationExperimental/NavigationTypeDefinition';
-
-import { Animated } from 'react-native';
+  Animated,
+} from 'react-native';
 
 import type { EventEmitter } from 'fbemitter';
 
 import type { ExNavigationRoute } from './ExNavigationRouter';
 import type {
   NavigationSceneRendererProps,
+  NavigationTransitionProps,
+  NavigationTransitionSpec,
 } from 'NavigationTypeDefinition';
 
 export type ExNavigationStyles = {
-  applyAnimation: ?((position: Animated.Value, navigationState: Object) => void);
+  applyAnimation: ?((position: Animated.Value, navigationState: Object) => void),
+  configureTransition: ?((
+    a: NavigationTransitionProps,
+    b: ?NavigationTransitionProps,
+  ) => NavigationTransitionSpec),
   sceneAnimations: ?((props: NavigationSceneRendererProps) => Object),
   navigationBarAnimations: ?((props: NavigationSceneRendererProps) => Object),
   gestures: ?((props: NavigationSceneRendererProps) => Object),
@@ -35,13 +37,19 @@ export type ExNavigationBarConfig = {
   visible?: boolean,
   styles?: ExNavigationStyles,
   title?: string | Function,
+  titleStyle?: Object | number,
   tintColor?: string,
   backgroundColor?: string | Function,
+  borderBottomWidth?: number,
+  elevation?: number,
+  borderBottomColor?: string,
   height?: number,
   translucent?: bool,
+  translucentTint?: 'dark' | 'default' | 'light',
   renderLeft?: (state: ExNavigationState, props: NavigationSceneRendererProps) => ?React.Element<{}>,
   renderTitle?: (state: ExNavigationState, props: NavigationSceneRendererProps) => ?React.Element<{}>,
   renderRight?: (state: ExNavigationState, props: NavigationSceneRendererProps) => ?React.Element<{}>,
+  renderBackground?: (state: ExNavigationState, props: NavigationSceneRendererProps) => ?React.Element<{}>,
 };
 
 export type ExNavigationDrawerConfig = {
@@ -50,6 +58,9 @@ export type ExNavigationDrawerConfig = {
 
 export type ExNavigationConfig = {
   styles?: ExNavigationStyles,
+  transitionOptions?: {
+    transitionGroup: string,
+  },
   navigationBar?: ExNavigationBarConfig,
   eventEmitter?: EventEmitter,
 };
